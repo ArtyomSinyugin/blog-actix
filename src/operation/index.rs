@@ -4,10 +4,11 @@ use serde::Serialize;
 use super::AppState;
 
 #[derive(Serialize)]
-struct IndexResponse {
-    server_id: usize, 
-    request_count: usize,
-    message: Vec<String>,
+pub struct IndexResponse {
+    pub server_id: usize,                
+    // могу ли предоставить доступ от к этим данным? Или лучше создать в clear похожую структуру, чтобы эти данные не были публичными?
+    pub request_count: usize,
+    pub messages: Vec<String>,
 }
 
 #[get("/")]  
@@ -21,7 +22,7 @@ async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
     Ok(web::Json(IndexResponse {
         server_id: state.server_id,
         request_count: requst_count,
-        message: ms.clone(),
+        messages: ms.clone(),
     }))
 }
 

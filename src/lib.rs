@@ -1,12 +1,13 @@
 mod operation;
 
-use crate::operation::{index::*, post::*};
+use crate::operation::{index::*, post::*, clear::*, errors::post_error};
 
 use actix_web::{middleware, App, HttpServer, web};
 use std::sync::{Arc, Mutex, atomic::{AtomicUsize, Ordering}};
 use std::cell::Cell;
 
 static SERVER_COUNTER: AtomicUsize = AtomicUsize::new(0);
+static LOG_FORMAT: &'static str = r#""%r" %s %b "%{User-Agent}i" %D"#;
 
 pub struct AppState {
     server_id: usize,
@@ -35,13 +36,16 @@ impl MessageApp {  // стр. 53
                     request_count: Cell::new(0),
                     messages: messages.clone(),
                 }))
-                .wrap(middleware::Logger::default())    // возможно, эта штука выкидывает из запроса браузера всё лишнее. 
+                .wrap(middleware::Logger::new(LOG_FORMAT))    // возможно, эта штука выкидывает из запроса браузера всё лишнее. 
                 .service(index)
                 .service(
                     web::resource("/send")
-                        .app_data(web::JsonConfig::default().limit(4096))   // эта штука ограничивает объём данных во время десериализации
+                        .app_data(web::JsonConfig::default()
+                            .limit(4096)              // эта штука ограничивает объём данных во время десериализации
+                            .error_handler(post_error)) // возвращает ошибку, если запрос не удалось десериализовать   
                         .route(web::post().to(post))
                 )
+                .service(clear)
         })
         .bind(("127.0.0.1", self.port))?
         .run()
