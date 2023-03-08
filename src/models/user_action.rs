@@ -3,15 +3,9 @@ use crate::{
     schema::users
 };
 use diesel::prelude::*;
-use serde::Serialize;
+use super::*;
 
 type Result<T> = std::result::Result<T, AppError>;
-
-#[derive(Debug, Queryable, Identifiable, Serialize, PartialEq)]
-pub struct User {
-    pub id: i32, 
-    pub username: String,
-}
 
 pub fn create_user(conn: &mut SqliteConnection, username: &str) -> Result<User> {
     // стр. 116
@@ -26,11 +20,6 @@ pub fn create_user(conn: &mut SqliteConnection, username: &str) -> Result<User> 
             .first(conn)           // сделал соединение мутабельным, потому что этого требовал этот метод!!!
             .map_err(Into::into)
     })
-}
-
-pub enum UserKey<'a> {
-    Username(&'a str),
-    ID(i32),
 }
 
 pub fn find_user<'a>(conn: &mut SqliteConnection, key: UserKey<'a>) -> Result<User> {

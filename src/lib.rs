@@ -31,7 +31,9 @@ impl Blog {  // стр. 106
             App::new()
                 .app_data(Data::new(pool.clone()))  // всегда нужно оборачивать в Data::new!!!!
                 .wrap(middleware::Logger::default())    // возможно, эта штука выкидывает из запроса браузера всё лишнее. 
-                .configure(routes::users::config)
+                .configure(routes::users::config_users)
+                .configure(routes::posts::config_posts)
+                .configure(routes::comments::config_comments)
         })
         .bind(("127.0.0.1", self.port))?
         .run()
