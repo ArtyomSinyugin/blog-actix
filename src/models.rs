@@ -1,9 +1,10 @@
-use crate::errors::AppError;
-use crate::schema::users;
+use crate::schema::{users, posts, comments};
 use diesel::prelude::*;
 use serde::Serialize;
 
-type Result<T> = std::result::Result<T, AppError>;
+pub(super) mod comment_action;
+pub(super) mod post_action;
+pub(super) mod user_action;
 
 #[derive(Debug, Queryable, Identifiable, Serialize, PartialEq)]
 pub struct User {
@@ -11,37 +12,34 @@ pub struct User {
     pub username: String,
 }
 
-pub fn create_user(conn: &mut SqliteConnection, username: &str) -> Result<User> {
-    // стр. 116
-    conn.transaction(|conn| {
-        diesel::insert_into(users::table)
-            .values((users::username.eq(username),))
-            .execute(conn)?;
- 
-        users::table   // я думаю, что смысл этого блока вернуть нам только что записанного пользователя из базы данных в нашу оперативную память (для дальнейшей работы с ним)
-            .order(users::id.desc())  // сортировка по убыванию. Зачем это?
-            .select((users::id, users::username))
-            .first(conn)           // сделал соединение мутабельным, потому что этого требовал этот метод!!!
-            .map_err(Into::into)
-    })
-}
-
 pub enum UserKey<'a> {
     Username(&'a str),
     ID(i32),
 }
 
-pub fn find_user<'a>(conn: &mut SqliteConnection, key: UserKey<'a>) -> Result<User> {
-    match key {
-        UserKey::Username(name) => users::table
-            .filter(users::username.eq(name))
-            .select((users::id, users::username))
-            .first::<User>(conn)
-            .map_err(AppError::from),
-        UserKey::ID(id) => users::table
-            .filter(users::id.eq(id))
-            .select((users::id, users::username))
-            .first::<User>(conn)
-            .map_err(Into::into),      
-    }
+#[derive(Debug, Queryable, Identifiable, Serialize, Associations)]
+#[diesel(belongs_to(User))]
+pub struct Post {
+    pub id: i32, 
+    pub user_id: i32,
+    pub title: String, 
+    pub body: String, 
+    pub published: bool,
+}
+
+#[derive(Queryable, Identifiable, Associations, Serialize, Debug)]
+#[diesel(belongs_to(User))]
+#[diesel(belongs_to(Post))]
+pub struct Comment {
+    pub id: i32,
+    pub user_id: i32,
+    pub post_id: i32,
+    pub body: String,
+}
+
+#[derive(Queryable, Serialize, Debug)]
+pub struct PostWithComment {
+    pub id: i32,
+    pub title: String, 
+    pub published: bool,
 }

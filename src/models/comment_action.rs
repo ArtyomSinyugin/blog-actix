@@ -3,21 +3,9 @@ use crate::{
     schema::{users, posts, comments}
 };
 use diesel::prelude::*;
-use serde::Serialize;
-use super::user_action::User;
-use super::post_action::Post;
+use super::*;
 
 type Result<T> = std::result::Result<T, AppError>;
-
-#[derive(Queryable, Identifiable, Associations, Serialize, Debug)]
-#[belongs_to(User)]
-#[belongs_to(Post)]
-pub struct Comment {
-    pub id: i32,
-    pub user_id: i32,
-    pub post_id: i32,
-    pub body: String,
-}
 
 pub fn create_comment(
     conn: &mut SqliteConnection, 
@@ -49,13 +37,6 @@ pub fn post_comments(conn: &mut SqliteConnection, post_id: i32) -> Result<Vec<(C
         .select((comments::all_columns, (users::id, users::username)))
         .load::<(Comment, User)>(conn)
         .map_err(Into::into)
-}
-
-#[derive(Queryable, Serialize, Debug)]
-pub struct PostWithComment {
-    pub id: i32,
-    pub title: String, 
-    pub published: bool,
 }
 
 pub fn user_comments(

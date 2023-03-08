@@ -3,21 +3,9 @@ use crate::{
     schema::{users, posts, comments}
 };
 use diesel::prelude::*;
-use serde::Serialize;
-
-use super::{user_action::User,comment_action::Comment};
+use super::*;
 
 type Result<T> = std::result::Result<T, AppError>;
-
-#[derive(Debug, Queryable, Identifiable, Serialize, Associations)]
-#[belongs_to(User)]
-pub struct Post {
-    pub id: i32, 
-    pub user_id: i32,
-    pub title: String, 
-    pub body: String, 
-    pub published: bool,
-}
 
 pub fn create_post(conn: &mut SqliteConnection, user: &User, title: &str, body: &str) -> Result<Post> {
     conn.transaction(|conn|{

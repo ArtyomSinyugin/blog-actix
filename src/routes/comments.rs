@@ -1,18 +1,11 @@
-use crate::errors::AppError;
-use crate::routes::convert;
-use crate::{models::{post_action, user_action}, Pool};
+use crate::{errors::AppError, routes::convert, Pool, models::comment_action};
+
 use actix_web::{web, HttpResponse, get, post};
 use futures::FutureExt;
 
-use serde::{Serialize, Deserialize};
+use super::*;
 
-#[derive(Debug, Serialize, Deserialize)]
-struct CommentInput {
-    user_id: i32,
-    body: String, 
-}
-
-#[post("/")]
+#[post("")]
 async fn add_comment(
     post_id: web::Path<i32>,
     comment: web::Json<CommentInput>,
@@ -29,4 +22,36 @@ async fn add_comment(
     .await
 }
 
-// остановился на стр. 157 (151)
+#[get("")]
+async fn post_comments(
+    post_id: web::Path<i32>,
+    pool: web::Data<Pool>
+) -> Result<HttpResponse, AppError> {
+    web::block(move|| {
+        let conn = &mut pool.get().expect("Ошибка соединения при запросе всех комментариев для поста");
+        comment_action::post_comments(conn, post_id.into_inner())
+    })
+    .then(|res| async {convert(res)})
+    .await
+}
+
+#[get("")]
+async fn user_comments(
+    user_id: web::Path<i32>,
+    pool: web::Data<Pool>
+) -> Result<HttpResponse, AppError> {
+    web::block(move|| {
+        let conn = &mut pool.get().expect("Ошибка соединения при запросе всех комментариев для пользователя");
+        comment_action::user_comments(conn, user_id.into_inner())
+    })
+    .then(|res| async {convert(res)})
+    .await
+}
+
+pub fn config_comments(cfg: &mut web::ServiceConfig) {
+    cfg
+        .service(web::scope("/users/{id}/comments").service(user_comments))
+        .service(web::scope("/posts/{id}/comments")
+            .service(add_comment)
+            .service(post_comments));
+}
